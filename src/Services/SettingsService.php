@@ -21,11 +21,9 @@ final class SettingsService
 {
     /**
      * Create a new settings service instance.
-     *
-     * @param  SettingsRepositoryInterface  $repository  The settings repository instance
      */
     public function __construct(
-        protected SettingsRepositoryInterface $repository
+        private(set) SettingsRepositoryInterface $repository,
     ) {}
 
     /**
@@ -214,14 +212,8 @@ final class SettingsService
      */
     public function setMultiple(array $settings): bool
     {
-        return DB::transaction(function () use ($settings) {
-            foreach ($settings as $key => $value) {
-                if (!$this->set($key, $value)) {
-                    return false;
-                }
-            }
-
-            return true;
+        return DB::transaction(function () use ($settings): bool {
+            return !array_any($settings, fn (mixed $value, string $key): bool => !$this->set($key, $value));
         });
     }
 
@@ -234,7 +226,7 @@ final class SettingsService
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    protected function validate(array $data, array $rules): array
+    private function validate(array $data, array $rules): array
     {
         return validator($data, $rules)->validate();
     }

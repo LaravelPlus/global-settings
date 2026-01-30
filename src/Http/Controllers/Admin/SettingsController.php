@@ -13,7 +13,6 @@ use LaravelPlus\GlobalSettings\Services\SettingsService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,17 +20,16 @@ use Inertia\Response;
  * Admin settings controller.
  *
  * Handles displaying and updating all application settings.
+ * Middleware is applied via route definitions in routes/admin.php.
  */
-final class SettingsController extends Controller
+final class SettingsController
 {
     /**
      * Create a new admin settings controller instance.
      */
     public function __construct(
-        protected SettingsService $settingsService
-    ) {
-        $this->middleware('auth');
-    }
+        private(set) SettingsService $settingsService,
+    ) {}
 
     /**
      * Check if user has admin or super-admin role.
@@ -40,7 +38,7 @@ final class SettingsController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user || (!$user->hasRole('super-admin') && !$user->hasRole('admin'))) {
+        if (!$user || !array_any(['super-admin', 'admin'], fn (string $role): bool => $user->hasRole($role))) {
             abort(403, 'Unauthorized. Admin access required.');
         }
     }
@@ -60,10 +58,12 @@ final class SettingsController extends Controller
         // Search functionality
         if ($request->has('search') && $request->filled('search')) {
             $search = $request->get('search');
-            $settings = $settings->filter(fn ($setting) => mb_stripos($setting->key, $search) !== false
-                    || mb_stripos($setting->label ?? '', $search) !== false
-                    || mb_stripos($setting->description ?? '', $search) !== false
-                    || mb_stripos($setting->value ?? '', $search) !== false);
+            $settings = $settings->filter(
+                fn ($setting) => array_any(
+                    [$setting->key, $setting->label ?? '', $setting->description ?? '', $setting->value ?? ''],
+                    fn (string $field): bool => mb_stripos($field, $search) !== false,
+                ),
+            );
         }
 
         return Inertia::render('admin/Settings', [
@@ -114,9 +114,7 @@ final class SettingsController extends Controller
         }
 
         // Set default role to 'user' if not provided
-        if (!isset($data['role'])) {
-            $data['role'] = SettingRole::User->value;
-        }
+        $data['role'] ??= SettingRole::User->value;
 
         $setting = $this->settingsService->create($data);
 
@@ -207,9 +205,10 @@ final class SettingsController extends Controller
 
         foreach ($settings as $key => $value) {
             // Handle checkbox values - if it's a boolean or '1'/'0', convert properly
-            if (is_bool($value) || $value === '1' || $value === '0' || $value === 'true' || $value === 'false') {
-                $value = filter_var($value, FILTER_VALIDATE_BOOLEAN);
-            }
+            $value = match (true) {
+                is_bool($value), $value === 'true', $value === 'false', $value === '1', $value === '0' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+                default => $value,
+            };
             $this->settingsService->set($key, $value);
         }
 

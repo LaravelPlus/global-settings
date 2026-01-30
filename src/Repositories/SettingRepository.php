@@ -23,15 +23,7 @@ final class SettingRepository implements SettingsRepositoryInterface
      *
      * @var class-string<Setting>
      */
-    protected readonly string $modelClass;
-
-    /**
-     * Create a new setting repository instance.
-     */
-    public function __construct()
-    {
-        $this->modelClass = Setting::class;
-    }
+    public private(set) string $modelClass = Setting::class;
 
     /**
      * Get a new query builder instance.
@@ -191,15 +183,11 @@ final class SettingRepository implements SettingsRepositoryInterface
      */
     public function set(string $key, mixed $value): bool
     {
-        // Convert boolean to string for checkbox fields
-        if (is_bool($value)) {
-            $value = $value ? '1' : '0';
-        }
-
-        // Encode arrays/objects as JSON
-        if (is_array($value) || is_object($value)) {
-            $value = json_encode($value);
-        }
+        $value = match (true) {
+            is_bool($value) => $value ? '1' : '0',
+            is_array($value), is_object($value) => json_encode($value),
+            default => $value,
+        };
 
         $setting = $this->findBy(['key' => $key]);
 

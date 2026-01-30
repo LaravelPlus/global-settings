@@ -20,9 +20,9 @@ final class GlobalSettingsServiceProvider extends ServiceProvider
 
         $this->app->bind(SettingsRepositoryInterface::class, SettingRepository::class);
 
-        $this->app->singleton(SettingsService::class, function ($app) {
-            return new SettingsService($app->make(SettingsRepositoryInterface::class));
-        });
+        $this->app->singleton(SettingsService::class, fn ($app) => new SettingsService(
+            $app->make(SettingsRepositoryInterface::class),
+        ));
     }
 
     /**
