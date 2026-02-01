@@ -76,9 +76,18 @@ final class GlobalSettingsServiceProvider extends ServiceProvider
      */
     private function registerRoutes(): void
     {
-        if (config('global-settings.admin.enabled', true)) {
+        if ($this->isAdminEnabled()) {
             $this->loadRoutesFrom(__DIR__.'/../routes/admin.php');
         }
+    }
+
+    /**
+     * Check if admin routes should be enabled.
+     * GlobalSettings is a required package and cannot be disabled via the DB toggle.
+     */
+    private function isAdminEnabled(): bool
+    {
+        return (bool) config('global-settings.admin.enabled', true);
     }
 
     /**
