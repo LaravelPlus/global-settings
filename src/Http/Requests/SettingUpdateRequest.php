@@ -33,7 +33,7 @@ final class SettingUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique('settings', 'key')->ignore($settingId),
             ],
-            'value' => ['nullable'],
+            'value' => ['nullable', 'max:10000'],
             'field_type' => ['required', 'string', Rule::in(['input', 'checkbox', 'multioptions'])],
             'options' => ['nullable', 'string'],
             'label' => ['nullable', 'string', 'max:255'],

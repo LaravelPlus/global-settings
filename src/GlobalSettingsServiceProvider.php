@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings;
 
+use Illuminate\Support\ServiceProvider;
 use LaravelPlus\GlobalSettings\Contracts\SettingsRepositoryInterface;
 use LaravelPlus\GlobalSettings\Repositories\SettingRepository;
 use LaravelPlus\GlobalSettings\Services\SettingsService;
-use Illuminate\Support\ServiceProvider;
 
 final class GlobalSettingsServiceProvider extends ServiceProvider
 {
@@ -52,6 +52,14 @@ final class GlobalSettingsServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../database/seeders' => database_path('seeders'),
             ], 'global-settings-seeders');
+
+            $this->publishes([
+                __DIR__.'/../skills/global-settings-development' => base_path('.claude/skills/global-settings-development'),
+            ], 'global-settings-skills');
+
+            $this->publishes([
+                __DIR__.'/../skills/global-settings-development' => base_path('.github/skills/global-settings-development'),
+            ], 'global-settings-skills-github');
         }
     }
 

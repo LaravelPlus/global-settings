@@ -25,7 +25,7 @@ final class SettingsUpdateRequest extends FormRequest
     {
         return [
             'settings' => ['required', 'array'],
-            'settings.*' => ['nullable'],
+            'settings.*' => ['nullable', 'max:10000'],
         ];
     }
 }

@@ -26,7 +26,7 @@ final class SettingStoreRequest extends FormRequest
     {
         return [
             'key' => ['required', 'string', 'max:255', 'unique:settings,key'],
-            'value' => ['nullable'],
+            'value' => ['nullable', 'max:10000'],
             'field_type' => ['required', 'string', Rule::in(['input', 'checkbox', 'multioptions'])],
             'options' => ['nullable', 'string', 'required_if:field_type,multioptions'],
             'label' => ['nullable', 'string', 'max:255'],

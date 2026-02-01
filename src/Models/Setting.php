@@ -38,6 +38,14 @@ final class Setting extends Model
     }
 
     /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'key';
+    }
+
+    /**
      * Get a setting value by key.
      */
     public static function get(string $key, mixed $default = null): mixed
