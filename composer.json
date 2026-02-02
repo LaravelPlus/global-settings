@@ -21,7 +21,8 @@
     },
     "autoload": {
         "psr-4": {
-            "LaravelPlus\\GlobalSettings\\": "src/"
+            "LaravelPlus\\GlobalSettings\\": "src/",
+             "LaravelPlus\\GlobalSettings\\Database\\": "database/"  
         }
     },
     "autoload-dev": {
