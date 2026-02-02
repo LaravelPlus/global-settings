@@ -21,11 +21,9 @@
     },
     "autoload": {
         "psr-4": {
-            "LaravelPlus\\GlobalSettings\\": "src/"
-        },
-        "classmap": [
-            "database/seeders"
-        ]
+            "LaravelPlus\\GlobalSettings\\": "src/",
+            "LaravelPlus\\GlobalSettings\\Database\\Seeders\\": "database/seeders/"
+        }
     },
     "autoload-dev": {
         "psr-4": {
