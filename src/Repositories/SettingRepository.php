@@ -208,4 +208,29 @@ final class SettingRepository implements SettingsRepositoryInterface
     {
         return $this->findBy(['key' => $key]) !== null;
     }
+
+    /**
+     * Find settings by group.
+     *
+     * @param  string  $group  The group name
+     * @return Collection<int, Setting>
+     */
+    public function findByGroup(string $group): Collection
+    {
+        return $this->query()->where('group', $group)->get();
+    }
+
+    /**
+     * Get all distinct non-null groups.
+     *
+     * @return array<int, string>
+     */
+    public function getGroups(): array
+    {
+        return $this->query()
+            ->whereNotNull('group')
+            ->distinct()
+            ->pluck('group')
+            ->toArray();
+    }
 }

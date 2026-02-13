@@ -101,6 +101,7 @@ final class SettingsService
                 'options' => ['nullable', 'string'],
                 'value' => ['nullable'],
                 'role' => ['required', 'in:system,user,plugin'],
+                'group' => ['nullable', 'string', 'in:general,authentication,notifications,security,appearance,system'],
             ]);
 
             return $this->repository->create($validated);
@@ -127,6 +128,7 @@ final class SettingsService
                 'options' => ['nullable', 'string'],
                 'value' => ['nullable'],
                 'role' => ['required', 'in:system,user,plugin'],
+                'group' => ['nullable', 'string', 'in:general,authentication,notifications,security,appearance,system'],
             ]);
 
             return $this->repository->update($id, $validated);
@@ -156,6 +158,27 @@ final class SettingsService
         }
 
         return $this->repository->delete($id);
+    }
+
+    /**
+     * Get settings by group.
+     *
+     * @param  string  $group  The group name
+     * @return Collection<int, Setting>
+     */
+    public function getByGroup(string $group): Collection
+    {
+        return $this->repository->findByGroup($group);
+    }
+
+    /**
+     * Get all distinct non-null groups.
+     *
+     * @return array<int, string>
+     */
+    public function getGroups(): array
+    {
+        return $this->repository->getGroups();
     }
 
     /**

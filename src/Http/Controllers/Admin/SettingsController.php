@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings\Http\Controllers\Admin;
 
+use LaravelPlus\GlobalSettings\Enums\SettingGroup;
 use LaravelPlus\GlobalSettings\Enums\SettingRole;
 use LaravelPlus\GlobalSettings\Http\Requests\SettingStoreRequest;
 use LaravelPlus\GlobalSettings\Http\Requests\SettingsUpdateRequest;
@@ -44,7 +45,40 @@ final class SettingsController
     }
 
     /**
-     * Show the admin settings page.
+     * Get the SettingGroup cases as value+label array for frontend.
+     *
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function groupOptions(): array
+    {
+        return array_map(
+            fn (SettingGroup $group): array => ['value' => $group->value, 'label' => $group->label()],
+            SettingGroup::cases(),
+        );
+    }
+
+    /**
+     * Map a setting model to an array for the frontend.
+     *
+     * @return array<string, mixed>
+     */
+    private function mapSetting(Setting $setting): array
+    {
+        return [
+            'id' => $setting->id,
+            'key' => $setting->key,
+            'value' => $setting->value,
+            'field_type' => $setting->field_type ?? 'input',
+            'options' => $setting->options,
+            'label' => $setting->label ?? $setting->key,
+            'description' => $setting->description,
+            'role' => $setting->role?->value ?? SettingRole::User->value,
+            'group' => $setting->group?->value,
+        ];
+    }
+
+    /**
+     * Show the admin settings page with paginated results.
      *
      * @param  Request  $request  The incoming request
      * @return Response The Inertia response with settings page data
@@ -53,30 +87,72 @@ final class SettingsController
     {
         $this->authorizeAdmin();
 
-        $settings = $this->settingsService->all();
+        $query = Setting::query();
 
-        // Search functionality
-        if ($request->has('search') && $request->filled('search')) {
+        if ($request->filled('search')) {
             $search = $request->get('search');
-            $settings = $settings->filter(
-                fn ($setting) => array_any(
-                    [$setting->key, $setting->label ?? '', $setting->description ?? '', $setting->value ?? ''],
-                    fn (string $field): bool => mb_stripos($field, $search) !== false,
-                ),
-            );
+            $query->where(function ($q) use ($search): void {
+                $q->where('key', 'like', "%{$search}%")
+                    ->orWhere('label', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('value', 'like', "%{$search}%");
+            });
         }
 
+        $paginated = $query->orderBy('id')->paginate(15);
+
+        $paginated->getCollection()->transform(fn (Setting $setting) => $this->mapSetting($setting));
+
         return Inertia::render('admin/Settings', [
-            'settings' => $settings->map(fn ($setting) => [
-                'id' => $setting->id,
-                'key' => $setting->key,
-                'value' => $setting->value,
-                'field_type' => $setting->field_type ?? 'input',
-                'options' => $setting->options,
-                'label' => $setting->label ?? $setting->key,
-                'description' => $setting->description,
-                'role' => $setting->role?->value ?? SettingRole::User->value,
-            ])->values(),
+            'settings' => $paginated,
+            'groups' => $this->groupOptions(),
+            'status' => $request->session()->get('status'),
+            'filters' => [
+                'search' => $request->get('search', ''),
+            ],
+        ]);
+    }
+
+    /**
+     * Show settings filtered by group with paginated results.
+     *
+     * @param  Request  $request  The incoming request
+     * @param  string  $group  The group slug
+     * @return Response The Inertia response with grouped settings
+     */
+    public function group(Request $request, string $group): Response
+    {
+        $this->authorizeAdmin();
+
+        $settingGroup = SettingGroup::tryFrom($group);
+
+        if (!$settingGroup) {
+            abort(404, 'Invalid settings group.');
+        }
+
+        $query = Setting::query()->where('group', $group);
+
+        if ($request->filled('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search): void {
+                $q->where('key', 'like', "%{$search}%")
+                    ->orWhere('label', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('value', 'like', "%{$search}%");
+            });
+        }
+
+        $paginated = $query->orderBy('id')->paginate(15);
+
+        $paginated->getCollection()->transform(fn (Setting $setting) => $this->mapSetting($setting));
+
+        return Inertia::render('admin/Settings', [
+            'settings' => $paginated,
+            'groups' => $this->groupOptions(),
+            'currentGroup' => [
+                'value' => $settingGroup->value,
+                'label' => $settingGroup->label(),
+            ],
             'status' => $request->session()->get('status'),
             'filters' => [
                 'search' => $request->get('search', ''),
@@ -93,7 +169,9 @@ final class SettingsController
     {
         $this->authorizeAdmin();
 
-        return Inertia::render('admin/Settings/Create');
+        return Inertia::render('admin/Settings/Create', [
+            'groups' => $this->groupOptions(),
+        ]);
     }
 
     /**
@@ -139,16 +217,8 @@ final class SettingsController
         $this->authorizeAdmin();
 
         return Inertia::render('admin/Settings/Edit', [
-            'setting' => [
-                'id' => $setting->id,
-                'key' => $setting->key,
-                'value' => $setting->value,
-                'field_type' => $setting->field_type ?? 'input',
-                'options' => $setting->options,
-                'label' => $setting->label,
-                'description' => $setting->description,
-                'role' => $setting->role?->value ?? SettingRole::User->value,
-            ],
+            'setting' => $this->mapSetting($setting),
+            'groups' => $this->groupOptions(),
         ]);
     }
 

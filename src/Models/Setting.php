@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings\Models;
 
+use LaravelPlus\GlobalSettings\Enums\SettingGroup;
 use LaravelPlus\GlobalSettings\Enums\SettingRole;
 use Illuminate\Database\Eloquent\Model;
 
@@ -22,6 +23,7 @@ final class Setting extends Model
         'label',
         'description',
         'role',
+        'group',
     ];
 
     /**
@@ -33,6 +35,7 @@ final class Setting extends Model
     {
         return [
             'role' => SettingRole::class,
+            'group' => SettingGroup::class,
             'options' => 'array',
         ];
     }

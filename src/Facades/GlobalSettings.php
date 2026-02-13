@@ -18,6 +18,8 @@ use LaravelPlus\GlobalSettings\Services\SettingsService;
  * @method static bool delete(int $id)
  * @method static \Illuminate\Database\Eloquent\Collection search(string $search)
  * @method static \Illuminate\Database\Eloquent\Collection getByRole(string $role)
+ * @method static \Illuminate\Database\Eloquent\Collection getByGroup(string $group)
+ * @method static array getGroups()
  * @method static array getMultiple(array $keys)
  * @method static bool setMultiple(array $settings)
  *

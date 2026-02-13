@@ -113,4 +113,19 @@ interface SettingsRepositoryInterface
      * @return bool True if the setting exists
      */
     public function has(string $key): bool;
+
+    /**
+     * Find settings by group.
+     *
+     * @param  string  $group  The group name
+     * @return Collection<int, Model>
+     */
+    public function findByGroup(string $group): Collection;
+
+    /**
+     * Get all distinct non-null groups.
+     *
+     * @return array<int, string>
+     */
+    public function getGroups(): array;
 }

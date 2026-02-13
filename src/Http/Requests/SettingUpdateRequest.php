@@ -39,6 +39,7 @@ final class SettingUpdateRequest extends FormRequest
             'label' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'role' => ['nullable', 'string', Rule::in(['system', 'user', 'plugin'])],
+            'group' => ['nullable', 'string', Rule::in(['general', 'authentication', 'notifications', 'security', 'appearance', 'system'])],
         ];
     }
 }

@@ -32,6 +32,7 @@ final class SettingStoreRequest extends FormRequest
             'label' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'role' => ['nullable', 'string', Rule::in(['user', 'plugin'])], // Users cannot create system settings
+            'group' => ['nullable', 'string', Rule::in(['general', 'authentication', 'notifications', 'security', 'appearance', 'system'])],
         ];
     }
 }

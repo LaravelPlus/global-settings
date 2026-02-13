@@ -15,6 +15,7 @@ Route::middleware($middleware)
     ->group(function (): void {
         Route::patch('bulk', [SettingsController::class, 'bulkUpdate'])->name('bulk-update');
         Route::get('/', [SettingsController::class, 'index'])->name('index');
+        Route::get('group/{group}', [SettingsController::class, 'group'])->name('group');
         Route::get('create', [SettingsController::class, 'create'])->name('create');
         Route::post('/', [SettingsController::class, 'store'])->name('store');
         Route::get('{setting}/edit', [SettingsController::class, 'edit'])->name('edit');
