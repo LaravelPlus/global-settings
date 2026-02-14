@@ -144,6 +144,7 @@ final class SettingRepository implements SettingsRepositoryInterface
     /**
      * Get a setting value by key.
      *
+     * Uses the Setting model's in-memory cache to avoid repeated DB queries.
      * Automatically decodes JSON strings and returns the appropriate value type.
      *
      * @param  string  $key  The setting key
@@ -152,13 +153,11 @@ final class SettingRepository implements SettingsRepositoryInterface
      */
     public function get(string $key, mixed $default = null): mixed
     {
-        $setting = $this->findBy(['key' => $key]);
+        $value = Setting::get($key);
 
-        if (!$setting) {
+        if ($value === null) {
             return $default;
         }
-
-        $value = $setting->value;
 
         // Try to decode JSON if it's a JSON string
         if (is_string($value)) {
