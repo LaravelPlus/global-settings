@@ -65,7 +65,7 @@ final class SettingsController
     private function mapSetting(Setting $setting): array
     {
         return [
-            'id' => $setting->id,
+            'uuid' => $setting->uuid,
             'key' => $setting->key,
             'value' => $setting->value,
             'field_type' => $setting->field_type ?? 'input',
