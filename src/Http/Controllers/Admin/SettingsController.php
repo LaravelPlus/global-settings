@@ -271,16 +271,13 @@ final class SettingsController implements HasMiddleware
      */
     public function bulkUpdate(SettingsUpdateRequest $request): RedirectResponse
     {
-        $settings = $request->validated()['settings'];
+        // Handle checkbox values - if it's a boolean or '1'/'0', convert properly
+        $settings = array_map(fn (mixed $value): mixed => match (true) {
+            is_bool($value), $value === 'true', $value === 'false', $value === '1', $value === '0' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+            default => $value,
+        }, $request->validated()['settings']);
 
-        foreach ($settings as $key => $value) {
-            // Handle checkbox values - if it's a boolean or '1'/'0', convert properly
-            $value = match (true) {
-                is_bool($value), $value === 'true', $value === 'false', $value === '1', $value === '0' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
-                default => $value,
-            };
-            $this->settingsService->set($key, $value);
-        }
+        $this->settingsService->updateExisting($settings);
 
         return redirect()->route('admin.settings.index')->with('status', 'Settings updated successfully.');
     }

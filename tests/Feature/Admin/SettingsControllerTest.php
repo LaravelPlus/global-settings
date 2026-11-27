@@ -448,6 +448,22 @@ final class SettingsControllerTest extends TestCase
         $this->assertDatabaseHas('settings', ['key' => 'setting2', 'value' => 'new2']);
     }
 
+    public function test_bulk_update_ignores_unknown_keys(): void
+    {
+        Setting::create(['key' => 'setting1', 'value' => 'old1']);
+
+        $response = $this->actingAs($this->admin)->patch(route('admin.settings.bulk-update'), [
+            'settings' => [
+                'setting1' => 'new1',
+                'injected_key' => 'value',
+            ],
+        ]);
+
+        $response->assertRedirect(route('admin.settings.index'));
+        $this->assertDatabaseHas('settings', ['key' => 'setting1', 'value' => 'new1']);
+        $this->assertDatabaseMissing('settings', ['key' => 'injected_key']);
+    }
+
     public function test_bulk_update_handles_boolean_values(): void
     {
         Setting::create(['key' => 'bool1', 'value' => '0', 'field_type' => 'checkbox']);

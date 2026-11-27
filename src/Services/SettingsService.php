@@ -241,6 +241,27 @@ final class SettingsService
     }
 
     /**
+     * Update the values of settings that already exist, in one transaction.
+     *
+     * Keys without an existing setting are ignored, so callers cannot create
+     * settings that bypass the create form (label, field type, role).
+     *
+     * @param  array<string, mixed>  $settings  Associative array of key => value pairs
+     * @return bool True if all existing settings were updated successfully
+     *
+     * @throws Throwable
+     */
+    public function updateExisting(array $settings): bool
+    {
+        $existing = $this->repository->query()
+            ->whereIn('key', array_map('strval', array_keys($settings)))
+            ->pluck('key')
+            ->all();
+
+        return $this->setMultiple(array_intersect_key($settings, array_flip($existing)));
+    }
+
+    /**
      * Validate the given data against rules.
      *
      * @param  array<string, mixed>  $data  The data to validate
