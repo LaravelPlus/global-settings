@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use LaravelPlus\GlobalSettings\Enums\SettingGroup;
 use LaravelPlus\GlobalSettings\Enums\SettingRole;
-use Illuminate\Database\Eloquent\Model;
 
 final class Setting extends Model
 {
@@ -36,8 +36,8 @@ final class Setting extends Model
 
     protected static function booted(): void
     {
-        static::saved(fn () => self::flushCache());
-        static::deleted(fn () => self::flushCache());
+        self::saved(fn () => self::flushCache());
+        self::deleted(fn () => self::flushCache());
     }
 
     /**

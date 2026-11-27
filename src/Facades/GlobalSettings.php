@@ -23,7 +23,7 @@ use LaravelPlus\GlobalSettings\Services\SettingsService;
  * @method static array getMultiple(array $keys)
  * @method static bool setMultiple(array $settings)
  *
- * @see \LaravelPlus\GlobalSettings\Services\SettingsService
+ * @see SettingsService
  */
 final class GlobalSettings extends Facade
 {

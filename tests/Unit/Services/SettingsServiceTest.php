@@ -7,6 +7,7 @@ namespace LaravelPlus\GlobalSettings\Tests\Unit\Services;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use LaravelPlus\GlobalSettings\Enums\SettingRole;
 use LaravelPlus\GlobalSettings\Models\Setting;
 use LaravelPlus\GlobalSettings\Services\SettingsService;
@@ -110,7 +111,7 @@ final class SettingsServiceTest extends TestCase
             'role' => SettingRole::User->value,
         ]);
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
 
         $this->service->create([
             'key' => 'duplicate',

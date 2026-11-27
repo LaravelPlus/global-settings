@@ -4,13 +4,7 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings\Http\Controllers\Admin;
 
-use LaravelPlus\GlobalSettings\Enums\SettingGroup;
-use LaravelPlus\GlobalSettings\Enums\SettingRole;
-use LaravelPlus\GlobalSettings\Http\Requests\SettingStoreRequest;
-use LaravelPlus\GlobalSettings\Http\Requests\SettingsUpdateRequest;
-use LaravelPlus\GlobalSettings\Http\Requests\SettingUpdateRequest;
-use LaravelPlus\GlobalSettings\Models\Setting;
-use LaravelPlus\GlobalSettings\Services\SettingsService;
+use App\Models\AuditLog;
 use Closure;
 use Exception;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +13,13 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Inertia\Inertia;
 use Inertia\Response;
+use LaravelPlus\GlobalSettings\Enums\SettingGroup;
+use LaravelPlus\GlobalSettings\Enums\SettingRole;
+use LaravelPlus\GlobalSettings\Http\Requests\SettingStoreRequest;
+use LaravelPlus\GlobalSettings\Http\Requests\SettingsUpdateRequest;
+use LaravelPlus\GlobalSettings\Http\Requests\SettingUpdateRequest;
+use LaravelPlus\GlobalSettings\Models\Setting;
+use LaravelPlus\GlobalSettings\Services\SettingsService;
 
 /**
  * Admin settings controller.
@@ -32,7 +33,7 @@ final class SettingsController implements HasMiddleware
      * Create a new admin settings controller instance.
      */
     public function __construct(
-        private(set) SettingsService $settingsService,
+        public private(set) SettingsService $settingsService,
     ) {}
 
     /**
@@ -49,7 +50,7 @@ final class SettingsController implements HasMiddleware
             new Middleware(static function (Request $request, Closure $next): mixed {
                 $user = $request->user();
 
-                if (!$user || !array_any(['super-admin', 'admin'], fn (string $role): bool => $user->hasRole($role))) {
+                if (! $user || ! array_any(['super-admin', 'admin'], fn (string $role): bool => $user->hasRole($role))) {
                     abort(404);
                 }
 
@@ -136,7 +137,7 @@ final class SettingsController implements HasMiddleware
     {
         $settingGroup = SettingGroup::tryFrom($group);
 
-        if (!$settingGroup) {
+        if (! $settingGroup) {
             abort(404, 'Invalid settings group.');
         }
 
@@ -202,8 +203,8 @@ final class SettingsController implements HasMiddleware
 
         $setting = $this->settingsService->create($data);
 
-        if (class_exists(\App\Models\AuditLog::class)) {
-            \App\Models\AuditLog::log('setting.created', $setting, null, [
+        if (class_exists(AuditLog::class)) {
+            AuditLog::log('setting.created', $setting, null, [
                 'key' => $setting->key,
                 'value' => $setting->value,
             ]);
@@ -253,8 +254,8 @@ final class SettingsController implements HasMiddleware
 
         $setting->refresh();
 
-        if (class_exists(\App\Models\AuditLog::class)) {
-            \App\Models\AuditLog::log('setting.updated', $setting, $oldValues, [
+        if (class_exists(AuditLog::class)) {
+            AuditLog::log('setting.updated', $setting, $oldValues, [
                 'key' => $setting->key,
                 'value' => $setting->value,
             ]);
@@ -291,8 +292,8 @@ final class SettingsController implements HasMiddleware
     public function destroy(Setting $setting): RedirectResponse
     {
         try {
-            if (class_exists(\App\Models\AuditLog::class)) {
-                \App\Models\AuditLog::log('setting.deleted', $setting, [
+            if (class_exists(AuditLog::class)) {
+                AuditLog::log('setting.deleted', $setting, [
                     'key' => $setting->key,
                     'value' => $setting->value,
                 ]);

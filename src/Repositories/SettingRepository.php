@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings\Repositories;
 
-use LaravelPlus\GlobalSettings\Contracts\SettingsRepositoryInterface;
-use LaravelPlus\GlobalSettings\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\LengthAwarePaginator;
+use LaravelPlus\GlobalSettings\Contracts\SettingsRepositoryInterface;
+use LaravelPlus\GlobalSettings\Models\Setting;
 
 /**
  * Setting repository implementation.
@@ -50,7 +51,7 @@ final class SettingRepository implements SettingsRepositoryInterface
      *
      * @param  array<string>  $columns
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function findOrFail(mixed $id, array $columns = ['*']): Model
     {
@@ -99,7 +100,7 @@ final class SettingRepository implements SettingsRepositoryInterface
     {
         $model = $this->find($id);
 
-        if (!$model) {
+        if (! $model) {
             return false;
         }
 
@@ -113,7 +114,7 @@ final class SettingRepository implements SettingsRepositoryInterface
     {
         $model = $this->find($id);
 
-        if (!$model) {
+        if (! $model) {
             return false;
         }
 

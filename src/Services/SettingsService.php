@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings\Services;
 
-use LaravelPlus\GlobalSettings\Contracts\SettingsRepositoryInterface;
-use LaravelPlus\GlobalSettings\Enums\SettingRole;
-use LaravelPlus\GlobalSettings\Models\Setting;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use LaravelPlus\GlobalSettings\Contracts\SettingsRepositoryInterface;
+use LaravelPlus\GlobalSettings\Enums\SettingRole;
+use LaravelPlus\GlobalSettings\Models\Setting;
 use Throwable;
 
 /**
@@ -23,7 +24,7 @@ final class SettingsService
      * Create a new settings service instance.
      */
     public function __construct(
-        private(set) SettingsRepositoryInterface $repository,
+        public private(set) SettingsRepositoryInterface $repository,
     ) {}
 
     /**
@@ -149,7 +150,7 @@ final class SettingsService
     {
         $setting = $this->findById($id);
 
-        if (!$setting) {
+        if (! $setting) {
             return false;
         }
 
@@ -236,7 +237,7 @@ final class SettingsService
     public function setMultiple(array $settings): bool
     {
         return DB::transaction(function () use ($settings): bool {
-            return !array_any($settings, fn (mixed $value, string $key): bool => !$this->set($key, $value));
+            return ! array_any($settings, fn (mixed $value, string $key): bool => ! $this->set($key, $value));
         });
     }
 
@@ -268,7 +269,7 @@ final class SettingsService
      * @param  array<string, mixed>  $rules  The validation rules
      * @return array<string, mixed> The validated data
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     private function validate(array $data, array $rules): array
     {
