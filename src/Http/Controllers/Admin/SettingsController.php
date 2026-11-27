@@ -11,9 +11,12 @@ use LaravelPlus\GlobalSettings\Http\Requests\SettingsUpdateRequest;
 use LaravelPlus\GlobalSettings\Http\Requests\SettingUpdateRequest;
 use LaravelPlus\GlobalSettings\Models\Setting;
 use LaravelPlus\GlobalSettings\Services\SettingsService;
+use Closure;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,7 +26,7 @@ use Inertia\Response;
  * Handles displaying and updating all application settings.
  * Middleware is applied via route definitions in routes/admin.php.
  */
-final class SettingsController
+final class SettingsController implements HasMiddleware
 {
     /**
      * Create a new admin settings controller instance.
@@ -33,15 +36,26 @@ final class SettingsController
     ) {}
 
     /**
-     * Check if user has admin or super-admin role.
+     * Require an admin or super-admin on every action.
+     *
+     * Runs as controller middleware, so it fires before FormRequest validation
+     * and returns 404 to keep the admin surface undiscoverable.
+     *
+     * @return array<int, Middleware>
      */
-    private function authorizeAdmin(): void
+    public static function middleware(): array
     {
-        $user = auth()->user();
+        return [
+            new Middleware(static function (Request $request, Closure $next): mixed {
+                $user = $request->user();
 
-        if (!$user || !array_any(['super-admin', 'admin'], fn (string $role): bool => $user->hasRole($role))) {
-            abort(403, 'Unauthorized. Admin access required.');
-        }
+                if (!$user || !array_any(['super-admin', 'admin'], fn (string $role): bool => $user->hasRole($role))) {
+                    abort(404);
+                }
+
+                return $next($request);
+            }),
+        ];
     }
 
     /**
@@ -85,8 +99,6 @@ final class SettingsController
      */
     public function index(Request $request): Response
     {
-        $this->authorizeAdmin();
-
         $query = Setting::query();
 
         if ($request->filled('search')) {
@@ -122,8 +134,6 @@ final class SettingsController
      */
     public function group(Request $request, string $group): Response
     {
-        $this->authorizeAdmin();
-
         $settingGroup = SettingGroup::tryFrom($group);
 
         if (!$settingGroup) {
@@ -167,8 +177,6 @@ final class SettingsController
      */
     public function create(): Response
     {
-        $this->authorizeAdmin();
-
         return Inertia::render('admin/Settings/Create', [
             'groups' => $this->groupOptions(),
         ]);
@@ -182,8 +190,6 @@ final class SettingsController
      */
     public function store(SettingStoreRequest $request): RedirectResponse
     {
-        $this->authorizeAdmin();
-
         $data = $request->validated();
 
         // Handle checkbox values
@@ -214,8 +220,6 @@ final class SettingsController
      */
     public function edit(Setting $setting): Response
     {
-        $this->authorizeAdmin();
-
         return Inertia::render('admin/Settings/Edit', [
             'setting' => $this->mapSetting($setting),
             'groups' => $this->groupOptions(),
@@ -231,8 +235,6 @@ final class SettingsController
      */
     public function update(SettingUpdateRequest $request, Setting $setting): RedirectResponse
     {
-        $this->authorizeAdmin();
-
         $validated = $request->validated();
 
         // Prevent changing role of system settings
@@ -269,8 +271,6 @@ final class SettingsController
      */
     public function bulkUpdate(SettingsUpdateRequest $request): RedirectResponse
     {
-        $this->authorizeAdmin();
-
         $settings = $request->validated()['settings'];
 
         foreach ($settings as $key => $value) {
@@ -293,8 +293,6 @@ final class SettingsController
      */
     public function destroy(Setting $setting): RedirectResponse
     {
-        $this->authorizeAdmin();
-
         try {
             if (class_exists(\App\Models\AuditLog::class)) {
                 \App\Models\AuditLog::log('setting.deleted', $setting, [

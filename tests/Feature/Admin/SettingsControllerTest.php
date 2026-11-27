@@ -56,7 +56,7 @@ final class SettingsControllerTest extends TestCase
     {
         $response = $this->actingAs($this->user)->get(route('admin.settings.index'));
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
     }
 
     public function test_admin_can_access_settings_index(): void
@@ -170,7 +170,7 @@ final class SettingsControllerTest extends TestCase
     {
         $response = $this->actingAs($this->user)->get(route('admin.settings.create'));
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
     }
 
     // ========================================
@@ -253,8 +253,20 @@ final class SettingsControllerTest extends TestCase
             'label' => 'Test',
         ]);
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
         $this->assertDatabaseMissing('settings', ['key' => 'unauthorized']);
+    }
+
+    public function test_regular_user_is_rejected_before_validation(): void
+    {
+        Setting::create(['key' => 'existing_key', 'value' => 'value']);
+
+        $response = $this->actingAs($this->user)->post(route('admin.settings.store'), [
+            'key' => 'existing_key',
+        ]);
+
+        $response->assertNotFound();
+        $response->assertSessionHasNoErrors();
     }
 
     // ========================================
@@ -285,7 +297,7 @@ final class SettingsControllerTest extends TestCase
 
         $response = $this->actingAs($this->user)->get(route('admin.settings.edit', $setting));
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
     }
 
     // ========================================
@@ -409,7 +421,7 @@ final class SettingsControllerTest extends TestCase
             'field_type' => 'input',
         ]);
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
         $this->assertDatabaseHas('settings', ['key' => 'test', 'value' => 'original']);
     }
 
@@ -462,7 +474,7 @@ final class SettingsControllerTest extends TestCase
             'settings' => ['protected' => 'hacked'],
         ]);
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
         $this->assertDatabaseHas('settings', ['key' => 'protected', 'value' => 'original']);
     }
 
@@ -508,7 +520,7 @@ final class SettingsControllerTest extends TestCase
 
         $response = $this->actingAs($this->user)->delete(route('admin.settings.destroy', $setting));
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
         $this->assertDatabaseHas('settings', ['key' => 'test']);
     }
 }
