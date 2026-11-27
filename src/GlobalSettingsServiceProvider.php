@@ -6,6 +6,7 @@ namespace LaravelPlus\GlobalSettings;
 
 use Illuminate\Support\ServiceProvider;
 use LaravelPlus\GlobalSettings\Contracts\SettingsRepositoryInterface;
+use LaravelPlus\GlobalSettings\Models\Setting;
 use LaravelPlus\GlobalSettings\Repositories\SettingRepository;
 use LaravelPlus\GlobalSettings\Services\SettingsService;
 
@@ -17,6 +18,8 @@ final class GlobalSettingsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/global-settings.php', 'global-settings');
+
+        $this->app->scoped(Setting::CACHE, fn (): array => Setting::loadAll());
 
         $this->app->bind(SettingsRepositoryInterface::class, SettingRepository::class);
 

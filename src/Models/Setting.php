@@ -11,11 +11,12 @@ use Illuminate\Database\Eloquent\Model;
 final class Setting extends Model
 {
     /**
-     * In-memory cache of all settings keyed by setting key.
+     * Container key of the per-request settings cache.
      *
-     * @var array<string, string|null>|null
+     * Bound as a scoped instance, so Octane and queue workers drop it between
+     * requests and jobs instead of serving values loaded by an earlier one.
      */
-    private static ?array $cache = null;
+    public const string CACHE = 'global-settings.cache';
 
     /**
      * The attributes that are mass assignable.
@@ -64,17 +65,11 @@ final class Setting extends Model
     /**
      * Get a setting value by key.
      *
-     * Uses in-memory cache to avoid repeated DB queries within a single request.
+     * Uses a request-scoped cache to avoid repeated DB queries within a single request.
      */
     public static function get(string $key, mixed $default = null): mixed
     {
-        self::loadCache();
-
-        if (!array_key_exists($key, self::$cache)) {
-            return $default;
-        }
-
-        return self::$cache[$key] ?? $default;
+        return app(self::CACHE)[$key] ?? $default;
     }
 
     /**
@@ -82,41 +77,32 @@ final class Setting extends Model
      */
     public static function set(string $key, mixed $value): bool
     {
-        $result = self::updateOrCreate(
+        return self::updateOrCreate(
             ['key' => $key],
             ['value' => $value]
         ) !== null;
-
-        // Cache is flushed by the saved event, update it immediately
-        if ($result) {
-            self::loadCache();
-        }
-
-        return $result;
     }
 
     /**
-     * Flush the in-memory settings cache.
+     * Flush the request-scoped settings cache.
      */
     public static function flushCache(): void
     {
-        self::$cache = null;
+        app()->forgetInstance(self::CACHE);
     }
 
     /**
-     * Load all settings into the in-memory cache.
+     * Load all settings keyed by setting key.
+     *
+     * @return array<string, string|null>
      */
-    private static function loadCache(): void
+    public static function loadAll(): array
     {
-        if (self::$cache !== null) {
-            return;
-        }
-
         try {
-            self::$cache = self::query()->pluck('value', 'key')->all();
+            return self::query()->pluck('value', 'key')->all();
         } catch (\Throwable) {
             // Table may not exist during migrations
-            self::$cache = [];
+            return [];
         }
     }
 }

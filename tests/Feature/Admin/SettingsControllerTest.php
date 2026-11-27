@@ -56,7 +56,7 @@ final class SettingsControllerTest extends TestCase
     {
         $response = $this->actingAs($this->user)->get(route('admin.settings.index'));
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
     }
 
     public function test_admin_can_access_settings_index(): void
@@ -98,9 +98,9 @@ final class SettingsControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('admin/Settings')
-            ->has('settings', 2)
-            ->where('settings.0.key', 'test_setting_1')
-            ->where('settings.1.key', 'test_setting_2')
+            ->has('settings.data', 2)
+            ->where('settings.data.0.key', 'test_setting_1')
+            ->where('settings.data.1.key', 'test_setting_2')
         );
     }
 
@@ -114,8 +114,8 @@ final class SettingsControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
-            ->has('settings', 1)
-            ->where('settings.0.key', 'email_enabled')
+            ->has('settings.data', 1)
+            ->where('settings.data.0.key', 'email_enabled')
         );
     }
 
@@ -137,8 +137,8 @@ final class SettingsControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
-            ->has('settings', 1)
-            ->where('settings.0.label', 'Email Configuration')
+            ->has('settings.data', 1)
+            ->where('settings.data.0.label', 'Email Configuration')
         );
     }
 
@@ -151,7 +151,7 @@ final class SettingsControllerTest extends TestCase
             ->get(route('admin.settings.index', ['search' => 'secret']));
 
         $response->assertOk();
-        $response->assertInertia(fn ($page) => $page->has('settings', 1));
+        $response->assertInertia(fn ($page) => $page->has('settings.data', 1));
     }
 
     // ========================================
@@ -170,7 +170,7 @@ final class SettingsControllerTest extends TestCase
     {
         $response = $this->actingAs($this->user)->get(route('admin.settings.create'));
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
     }
 
     // ========================================
@@ -253,8 +253,20 @@ final class SettingsControllerTest extends TestCase
             'label' => 'Test',
         ]);
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
         $this->assertDatabaseMissing('settings', ['key' => 'unauthorized']);
+    }
+
+    public function test_regular_user_is_rejected_before_validation(): void
+    {
+        Setting::create(['key' => 'existing_key', 'value' => 'value']);
+
+        $response = $this->actingAs($this->user)->post(route('admin.settings.store'), [
+            'key' => 'existing_key',
+        ]);
+
+        $response->assertNotFound();
+        $response->assertSessionHasNoErrors();
     }
 
     // ========================================
@@ -285,7 +297,7 @@ final class SettingsControllerTest extends TestCase
 
         $response = $this->actingAs($this->user)->get(route('admin.settings.edit', $setting));
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
     }
 
     // ========================================
@@ -409,7 +421,7 @@ final class SettingsControllerTest extends TestCase
             'field_type' => 'input',
         ]);
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
         $this->assertDatabaseHas('settings', ['key' => 'test', 'value' => 'original']);
     }
 
@@ -434,6 +446,22 @@ final class SettingsControllerTest extends TestCase
 
         $this->assertDatabaseHas('settings', ['key' => 'setting1', 'value' => 'new1']);
         $this->assertDatabaseHas('settings', ['key' => 'setting2', 'value' => 'new2']);
+    }
+
+    public function test_bulk_update_ignores_unknown_keys(): void
+    {
+        Setting::create(['key' => 'setting1', 'value' => 'old1']);
+
+        $response = $this->actingAs($this->admin)->patch(route('admin.settings.bulk-update'), [
+            'settings' => [
+                'setting1' => 'new1',
+                'injected_key' => 'value',
+            ],
+        ]);
+
+        $response->assertRedirect(route('admin.settings.index'));
+        $this->assertDatabaseHas('settings', ['key' => 'setting1', 'value' => 'new1']);
+        $this->assertDatabaseMissing('settings', ['key' => 'injected_key']);
     }
 
     public function test_bulk_update_handles_boolean_values(): void
@@ -462,7 +490,7 @@ final class SettingsControllerTest extends TestCase
             'settings' => ['protected' => 'hacked'],
         ]);
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
         $this->assertDatabaseHas('settings', ['key' => 'protected', 'value' => 'original']);
     }
 
@@ -508,7 +536,7 @@ final class SettingsControllerTest extends TestCase
 
         $response = $this->actingAs($this->user)->delete(route('admin.settings.destroy', $setting));
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
         $this->assertDatabaseHas('settings', ['key' => 'test']);
     }
 }
