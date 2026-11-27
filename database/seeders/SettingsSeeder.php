@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings\Database\Seeders;
 
+use Illuminate\Database\Seeder;
 use LaravelPlus\GlobalSettings\Enums\SettingGroup;
 use LaravelPlus\GlobalSettings\Enums\SettingRole;
 use LaravelPlus\GlobalSettings\Models\Setting;
-use Illuminate\Database\Seeder;
 
 final class SettingsSeeder extends Seeder
 {

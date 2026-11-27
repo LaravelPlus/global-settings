@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace LaravelPlus\GlobalSettings\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use LaravelPlus\GlobalSettings\Support\SettingRules;
 
 final class SettingUpdateRequest extends FormRequest
 {
@@ -18,28 +18,19 @@ final class SettingUpdateRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * Fill omitted fields from the stored setting (a missing role keeps the
+     * current one) and normalize the way SettingsService does.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->replace(SettingRules::prepare($this->all(), $this->route('setting')));
+    }
+
+    /**
+     * @return array<string, array<int, mixed>>
      */
     public function rules(): array
     {
-        $settingId = $this->route('setting')?->id;
-
-        return [
-            'key' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('settings', 'key')->ignore($settingId),
-            ],
-            'value' => ['nullable', 'max:10000'],
-            'field_type' => ['required', 'string', Rule::in(['input', 'checkbox', 'multioptions'])],
-            'options' => ['nullable', 'string'],
-            'label' => ['nullable', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'role' => ['nullable', 'string', Rule::in(['system', 'user', 'plugin'])],
-            'group' => ['nullable', 'string', Rule::in(['general', 'authentication', 'notifications', 'security', 'appearance', 'system'])],
-        ];
+        return SettingRules::rules($this->route('setting'));
     }
 }

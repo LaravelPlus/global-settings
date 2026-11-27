@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings\Tests\Feature\Admin;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use LaravelPlus\GlobalSettings\Enums\SettingRole;
 use LaravelPlus\GlobalSettings\Models\Setting;
 use LaravelPlus\GlobalSettings\Tests\TestCase;
 use LaravelPlus\GlobalSettings\Tests\User;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Role;
 
 final class SettingsControllerTest extends TestCase
@@ -538,5 +540,98 @@ final class SettingsControllerTest extends TestCase
 
         $response->assertNotFound();
         $this->assertDatabaseHas('settings', ['key' => 'test']);
+    }
+
+    // ========================================
+    // PAYLOAD, PARTIAL UPDATES AND TYPED VALUES (gh-2, gh-4)
+    // ========================================
+
+    public function test_admin_pages_render_in_strict_mode_without_a_uuid_key(): void
+    {
+        $setting = Setting::create(['key' => 'strict_test', 'value' => 'v', 'role' => SettingRole::User->value]);
+
+        Model::shouldBeStrict();
+
+        try {
+            $this->actingAs($this->admin)->get(route('admin.settings.edit', $setting))
+                ->assertOk()
+                ->assertInertia(fn ($page) => $page->where('setting.key', 'strict_test')->missing('setting.uuid'));
+            $this->actingAs($this->admin)->get(route('admin.settings.index'))
+                ->assertOk()
+                ->assertInertia(fn ($page) => $page->missing('settings.data.0.uuid'));
+        } finally {
+            Model::shouldBeStrict(false);
+        }
+    }
+
+    public function test_update_without_role_keeps_the_existing_role(): void
+    {
+        $setting = Setting::create(['key' => 'plugin_setting', 'value' => 'a', 'field_type' => 'input', 'role' => SettingRole::Plugin->value]);
+
+        $this->actingAs($this->admin)->put(route('admin.settings.update', $setting), [
+            'key' => 'plugin_setting',
+            'value' => 'b',
+            'field_type' => 'input',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('admin.settings.index'));
+
+        $setting->refresh();
+        $this->assertSame('b', $setting->value);
+        $this->assertSame(SettingRole::Plugin, $setting->role);
+    }
+
+    public function test_partial_update_changes_only_what_was_sent(): void
+    {
+        $setting = Setting::create(['key' => 'partial', 'value' => 'keep', 'field_type' => 'input', 'label' => 'Old', 'role' => SettingRole::Plugin->value]);
+
+        $this->actingAs($this->admin)->patch(route('admin.settings.update', $setting), ['label' => 'New'])
+            ->assertSessionHasNoErrors();
+
+        $setting->refresh();
+        $this->assertSame(['partial', 'keep', 'input', 'New', SettingRole::Plugin], [$setting->key, $setting->value, $setting->field_type, $setting->label, $setting->role]);
+    }
+
+    public function test_multioptions_are_stored_as_an_array_and_sent_back_comma_separated(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.settings.store'), [
+            'key' => 'theme',
+            'value' => 'dark',
+            'field_type' => 'multioptions',
+            'options' => 'light, dark',
+        ])->assertSessionHasNoErrors();
+
+        $setting = Setting::where('key', 'theme')->firstOrFail();
+        $this->assertSame(['light', 'dark'], $setting->options);
+
+        $this->actingAs($this->admin)->get(route('admin.settings.edit', $setting))
+            ->assertInertia(fn ($page) => $page->where('setting.options', 'light,dark'));
+    }
+
+    /** @return array<string, array{0: string, 1: mixed, 2: ?string, 3: bool}> */
+    public static function typedValues(): array
+    {
+        return [
+            'checkbox accepts on' => ['checkbox', 'on', null, true],
+            'checkbox rejects junk' => ['checkbox', 'maybe', null, false],
+            'number accepts numeric' => ['number', '42.5', null, true],
+            'number accepts large' => ['number', '250000', null, true],
+            'number rejects text' => ['number', 'abc', null, false],
+            'multioptions accepts an option' => ['multioptions', 'b', 'a,b', true],
+            'multioptions rejects others' => ['multioptions', 'z', 'a,b', false],
+            'input accepts text' => ['input', 'hello', null, true],
+        ];
+    }
+
+    #[DataProvider('typedValues')]
+    public function test_values_are_validated_for_their_type(string $type, mixed $value, ?string $options, bool $valid): void
+    {
+        $response = $this->actingAs($this->admin)->post(route('admin.settings.store'), array_filter([
+            'key' => 'typed',
+            'value' => $value,
+            'field_type' => $type,
+            'options' => $options,
+        ], fn ($v) => $v !== null));
+
+        $valid ? $response->assertSessionHasNoErrors() : $response->assertSessionHasErrors('value');
+        $this->assertSame($valid, Setting::where('key', 'typed')->exists());
     }
 }

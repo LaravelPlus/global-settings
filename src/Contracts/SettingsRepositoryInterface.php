@@ -7,6 +7,7 @@ namespace LaravelPlus\GlobalSettings\Contracts;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
@@ -33,7 +34,7 @@ interface SettingsRepositoryInterface
      *
      * @param  array<string>  $columns
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ModelNotFoundException
      */
     public function findOrFail(mixed $id, array $columns = ['*']): Model;
 

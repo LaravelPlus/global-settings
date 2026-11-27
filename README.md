@@ -4,7 +4,7 @@ A standalone settings management package for Laravel with an admin panel powered
 
 ## Features
 
-- Key-value settings store with typed fields (input, checkbox, multioptions)
+- Key-value settings store with typed fields (input, checkbox, number, multioptions), each value validated for its type
 - Role-based settings (system, user, plugin) — system settings are protected from deletion
 - Admin panel with search, create, edit, bulk update, and delete
 - Facade for easy access (`GlobalSettings::get()`, `GlobalSettings::set()`)
@@ -14,8 +14,9 @@ A standalone settings management package for Laravel with an admin panel powered
 ## Requirements
 
 - PHP 8.4+
-- Laravel 12+
-- Inertia.js (for admin panel views)
+- Laravel 12 or 13
+- Optional: `inertiajs/inertia-laravel` for the admin panel. Without it the admin routes are not registered; the settings service and facade still work.
+- Optional: `spatie/laravel-permission`. Not required, see [Admin access](#admin-access).
 
 ## Installation
 
@@ -161,6 +162,26 @@ When `admin.enabled` is `true`, the following routes are registered:
 | PATCH | `/admin/settings/bulk` | `admin.settings.bulk-update` | Bulk update values |
 
 The controller renders Inertia pages at `admin/Settings`, `admin/Settings/Create`, and `admin/Settings/Edit`. The host application must provide these Vue page components.
+
+### Admin access
+
+Every admin action checks the `global-settings.admin` gate and answers **404** when it
+refuses. The package's default gate allows users whose model has `hasAnyRole()`
+(spatie/laravel-permission) with the `super-admin` or `admin` role, and denies everyone
+else, so a host without Spatie keeps the admin closed until it defines the gate:
+
+```php
+Gate::define('global-settings.admin', fn (User $user): bool => $user->is_admin);
+```
+
+### Validation
+
+The admin forms and `SettingsService::create()` / `update()` share one rule set
+(`LaravelPlus\GlobalSettings\Support\SettingRules`). An update only changes the fields
+it sends: a missing `role` keeps the current one, and a system setting always stays
+system. `options` is stored as an array (the admin form may send a comma-separated
+string) and sent to the pages comma-separated. Values are checked by `field_type`:
+`checkbox` → boolean, `number` → numeric, `multioptions` → one of the options.
 
 ## Setting Roles
 

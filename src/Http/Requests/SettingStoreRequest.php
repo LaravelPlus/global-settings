@@ -6,6 +6,8 @@ namespace LaravelPlus\GlobalSettings\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use LaravelPlus\GlobalSettings\Enums\SettingRole;
+use LaravelPlus\GlobalSettings\Support\SettingRules;
 
 final class SettingStoreRequest extends FormRequest
 {
@@ -18,21 +20,23 @@ final class SettingStoreRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Normalize the form input the way SettingsService does.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->replace(SettingRules::prepare($this->all()));
+    }
+
+    /**
+     * The shared setting rules; the admin form cannot create system settings.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, array<int, mixed>>
      */
     public function rules(): array
     {
         return [
-            'key' => ['required', 'string', 'max:255', 'unique:settings,key'],
-            'value' => ['nullable', 'max:10000'],
-            'field_type' => ['required', 'string', Rule::in(['input', 'checkbox', 'multioptions'])],
-            'options' => ['nullable', 'string', 'required_if:field_type,multioptions'],
-            'label' => ['nullable', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'role' => ['nullable', 'string', Rule::in(['user', 'plugin'])], // Users cannot create system settings
-            'group' => ['nullable', 'string', Rule::in(['general', 'authentication', 'notifications', 'security', 'appearance', 'system'])],
+            ...SettingRules::rules(),
+            'role' => ['required', 'string', Rule::in([SettingRole::User->value, SettingRole::Plugin->value])],
         ];
     }
 }

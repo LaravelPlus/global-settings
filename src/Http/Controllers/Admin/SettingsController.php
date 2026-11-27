@@ -4,6 +4,16 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings\Http\Controllers\Admin;
 
+use App\Models\AuditLog;
+use Closure;
+use Exception;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
+use Inertia\Response;
 use LaravelPlus\GlobalSettings\Enums\SettingGroup;
 use LaravelPlus\GlobalSettings\Enums\SettingRole;
 use LaravelPlus\GlobalSettings\Http\Requests\SettingStoreRequest;
@@ -11,14 +21,6 @@ use LaravelPlus\GlobalSettings\Http\Requests\SettingsUpdateRequest;
 use LaravelPlus\GlobalSettings\Http\Requests\SettingUpdateRequest;
 use LaravelPlus\GlobalSettings\Models\Setting;
 use LaravelPlus\GlobalSettings\Services\SettingsService;
-use Closure;
-use Exception;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
-use Inertia\Inertia;
-use Inertia\Response;
 
 /**
  * Admin settings controller.
@@ -32,14 +34,14 @@ final class SettingsController implements HasMiddleware
      * Create a new admin settings controller instance.
      */
     public function __construct(
-        private(set) SettingsService $settingsService,
+        public private(set) SettingsService $settingsService,
     ) {}
 
     /**
-     * Require an admin or super-admin on every action.
+     * Every action needs the `global-settings.admin` gate; anyone it refuses
+     * gets a 404 so the admin surface stays undiscoverable.
      *
-     * Runs as controller middleware, so it fires before FormRequest validation
-     * and returns 404 to keep the admin surface undiscoverable.
+     * Runs as controller middleware, so it fires before FormRequest validation.
      *
      * @return array<int, Middleware>
      */
@@ -47,11 +49,7 @@ final class SettingsController implements HasMiddleware
     {
         return [
             new Middleware(static function (Request $request, Closure $next): mixed {
-                $user = $request->user();
-
-                if (!$user || !array_any(['super-admin', 'admin'], fn (string $role): bool => $user->hasRole($role))) {
-                    abort(404);
-                }
+                abort_unless(Gate::forUser($request->user())->allows('global-settings.admin'), 404);
 
                 return $next($request);
             }),
@@ -79,11 +77,11 @@ final class SettingsController implements HasMiddleware
     private function mapSetting(Setting $setting): array
     {
         return [
-            'uuid' => $setting->uuid,
             'key' => $setting->key,
             'value' => $setting->value,
             'field_type' => $setting->field_type ?? 'input',
-            'options' => $setting->options,
+            // Stored as an array; the admin form edits a comma-separated string.
+            'options' => is_array($setting->options) ? implode(',', $setting->options) : $setting->options,
             'label' => $setting->label ?? $setting->key,
             'description' => $setting->description,
             'role' => $setting->role?->value ?? SettingRole::User->value,
@@ -136,7 +134,7 @@ final class SettingsController implements HasMiddleware
     {
         $settingGroup = SettingGroup::tryFrom($group);
 
-        if (!$settingGroup) {
+        if (! $settingGroup) {
             abort(404, 'Invalid settings group.');
         }
 
@@ -192,18 +190,10 @@ final class SettingsController implements HasMiddleware
     {
         $data = $request->validated();
 
-        // Handle checkbox values
-        if ($data['field_type'] === 'checkbox' && isset($data['value'])) {
-            $data['value'] = filter_var($data['value'], FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
-        }
-
-        // Set default role to 'user' if not provided
-        $data['role'] ??= SettingRole::User->value;
-
         $setting = $this->settingsService->create($data);
 
-        if (class_exists(\App\Models\AuditLog::class)) {
-            \App\Models\AuditLog::log('setting.created', $setting, null, [
+        if (class_exists(AuditLog::class)) {
+            AuditLog::log('setting.created', $setting, null, [
                 'key' => $setting->key,
                 'value' => $setting->value,
             ]);
@@ -237,24 +227,14 @@ final class SettingsController implements HasMiddleware
     {
         $validated = $request->validated();
 
-        // Prevent changing role of system settings
-        if ($setting->role === SettingRole::System && isset($validated['role']) && $validated['role'] !== SettingRole::System->value) {
-            $validated['role'] = SettingRole::System->value;
-        }
-
-        // Handle checkbox values
-        if ($validated['field_type'] === 'checkbox' && isset($validated['value'])) {
-            $validated['value'] = filter_var($validated['value'], FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
-        }
-
         $oldValues = ['key' => $setting->key, 'value' => $setting->value];
 
         $this->settingsService->update($setting->id, $validated);
 
         $setting->refresh();
 
-        if (class_exists(\App\Models\AuditLog::class)) {
-            \App\Models\AuditLog::log('setting.updated', $setting, $oldValues, [
+        if (class_exists(AuditLog::class)) {
+            AuditLog::log('setting.updated', $setting, $oldValues, [
                 'key' => $setting->key,
                 'value' => $setting->value,
             ]);
@@ -291,8 +271,8 @@ final class SettingsController implements HasMiddleware
     public function destroy(Setting $setting): RedirectResponse
     {
         try {
-            if (class_exists(\App\Models\AuditLog::class)) {
-                \App\Models\AuditLog::log('setting.deleted', $setting, [
+            if (class_exists(AuditLog::class)) {
+                AuditLog::log('setting.deleted', $setting, [
                     'key' => $setting->key,
                     'value' => $setting->value,
                 ]);
