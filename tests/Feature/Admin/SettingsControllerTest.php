@@ -98,9 +98,9 @@ final class SettingsControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('admin/Settings')
-            ->has('settings', 2)
-            ->where('settings.0.key', 'test_setting_1')
-            ->where('settings.1.key', 'test_setting_2')
+            ->has('settings.data', 2)
+            ->where('settings.data.0.key', 'test_setting_1')
+            ->where('settings.data.1.key', 'test_setting_2')
         );
     }
 
@@ -114,8 +114,8 @@ final class SettingsControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
-            ->has('settings', 1)
-            ->where('settings.0.key', 'email_enabled')
+            ->has('settings.data', 1)
+            ->where('settings.data.0.key', 'email_enabled')
         );
     }
 
@@ -137,8 +137,8 @@ final class SettingsControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
-            ->has('settings', 1)
-            ->where('settings.0.label', 'Email Configuration')
+            ->has('settings.data', 1)
+            ->where('settings.data.0.label', 'Email Configuration')
         );
     }
 
@@ -151,7 +151,7 @@ final class SettingsControllerTest extends TestCase
             ->get(route('admin.settings.index', ['search' => 'secret']));
 
         $response->assertOk();
-        $response->assertInertia(fn ($page) => $page->has('settings', 1));
+        $response->assertInertia(fn ($page) => $page->has('settings.data', 1));
     }
 
     // ========================================
