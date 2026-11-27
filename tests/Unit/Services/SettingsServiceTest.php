@@ -6,6 +6,7 @@ namespace LaravelPlus\GlobalSettings\Tests\Unit\Services;
 
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use LaravelPlus\GlobalSettings\Enums\SettingRole;
 use LaravelPlus\GlobalSettings\Models\Setting;
 use LaravelPlus\GlobalSettings\Services\SettingsService;
@@ -34,6 +35,20 @@ final class SettingsServiceTest extends TestCase
         ]);
 
         $this->assertEquals('test_value', $this->service->get('test_key'));
+    }
+
+    public function test_cache_is_dropped_between_octane_requests_and_queue_jobs(): void
+    {
+        Setting::create(['key' => 'site_name', 'value' => 'old']);
+        $this->assertEquals('old', $this->service->get('site_name'));
+
+        // Another process changes the row; no model event fires here.
+        DB::table('settings')->where('key', 'site_name')->update(['value' => 'new']);
+
+        // What Octane does per request and the queue worker per job.
+        $this->app->forgetScopedInstances();
+
+        $this->assertEquals('new', $this->service->get('site_name'));
     }
 
     public function test_get_returns_default_when_not_found(): void
