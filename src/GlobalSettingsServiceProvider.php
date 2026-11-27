@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace LaravelPlus\GlobalSettings;
 
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Inertia\Inertia;
 use LaravelPlus\GlobalSettings\Contracts\SettingsRepositoryInterface;
 use LaravelPlus\GlobalSettings\Models\Setting;
 use LaravelPlus\GlobalSettings\Repositories\SettingRepository;
@@ -35,7 +37,20 @@ final class GlobalSettingsServiceProvider extends ServiceProvider
     {
         $this->registerPublishing();
         $this->registerResources();
+        $this->registerGate();
         $this->registerRoutes();
+    }
+
+    /**
+     * Default admin check: Spatie-style roles when the host's user model has
+     * them, deny otherwise (fail closed). A host defines its own
+     * `global-settings.admin` gate (it boots after this provider) to decide.
+     */
+    private function registerGate(): void
+    {
+        if (! Gate::has('global-settings.admin')) {
+            Gate::define('global-settings.admin', fn ($user): bool => method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super-admin', 'admin']));
+        }
     }
 
     /**
@@ -87,10 +102,12 @@ final class GlobalSettingsServiceProvider extends ServiceProvider
     /**
      * Check if admin routes should be enabled.
      * GlobalSettings is a required package and cannot be disabled via the DB toggle.
+     * The admin pages render through Inertia, an optional dependency: without
+     * it the routes are skipped instead of failing on every request.
      */
     private function isAdminEnabled(): bool
     {
-        return (bool) config('global-settings.admin.enabled', true);
+        return (bool) config('global-settings.admin.enabled', true) && class_exists(Inertia::class);
     }
 
     /**

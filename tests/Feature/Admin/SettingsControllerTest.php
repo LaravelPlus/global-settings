@@ -10,6 +10,7 @@ use LaravelPlus\GlobalSettings\Enums\SettingRole;
 use LaravelPlus\GlobalSettings\Models\Setting;
 use LaravelPlus\GlobalSettings\Tests\TestCase;
 use LaravelPlus\GlobalSettings\Tests\User;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Role;
 
 final class SettingsControllerTest extends TestCase
@@ -620,7 +621,7 @@ final class SettingsControllerTest extends TestCase
         ];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('typedValues')]
+    #[DataProvider('typedValues')]
     public function test_values_are_validated_for_their_type(string $type, mixed $value, ?string $options, bool $valid): void
     {
         $response = $this->actingAs($this->admin)->post(route('admin.settings.store'), array_filter([

@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 use LaravelPlus\GlobalSettings\Enums\SettingGroup;
@@ -37,10 +38,10 @@ final class SettingsController implements HasMiddleware
     ) {}
 
     /**
-     * Require an admin or super-admin on every action.
+     * Every action needs the `global-settings.admin` gate; anyone it refuses
+     * gets a 404 so the admin surface stays undiscoverable.
      *
-     * Runs as controller middleware, so it fires before FormRequest validation
-     * and returns 404 to keep the admin surface undiscoverable.
+     * Runs as controller middleware, so it fires before FormRequest validation.
      *
      * @return array<int, Middleware>
      */
@@ -48,11 +49,7 @@ final class SettingsController implements HasMiddleware
     {
         return [
             new Middleware(static function (Request $request, Closure $next): mixed {
-                $user = $request->user();
-
-                if (! $user || ! array_any(['super-admin', 'admin'], fn (string $role): bool => $user->hasRole($role))) {
-                    abort(404);
-                }
+                abort_unless(Gate::forUser($request->user())->allows('global-settings.admin'), 404);
 
                 return $next($request);
             }),
