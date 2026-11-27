@@ -11,6 +11,7 @@ use Illuminate\Validation\ValidationException;
 use LaravelPlus\GlobalSettings\Contracts\SettingsRepositoryInterface;
 use LaravelPlus\GlobalSettings\Enums\SettingRole;
 use LaravelPlus\GlobalSettings\Models\Setting;
+use LaravelPlus\GlobalSettings\Support\SettingRules;
 use Throwable;
 
 /**
@@ -94,23 +95,14 @@ final class SettingsService
     public function create(array $data): Setting
     {
         return DB::transaction(function () use ($data) {
-            $validated = $this->validate($data, [
-                'key' => ['required', 'string', 'max:255', 'unique:settings,key'],
-                'label' => ['nullable', 'string', 'max:255'],
-                'description' => ['nullable', 'string', 'max:1000'],
-                'field_type' => ['required', 'in:input,checkbox,multioptions'],
-                'options' => ['nullable', 'string'],
-                'value' => ['nullable'],
-                'role' => ['required', 'in:system,user,plugin'],
-                'group' => ['nullable', 'string', 'in:general,authentication,notifications,security,appearance,system'],
-            ]);
+            $validated = $this->validate(SettingRules::prepare($data), SettingRules::rules());
 
             return $this->repository->create($validated);
         });
     }
 
     /**
-     * Update a setting.
+     * Update a setting. Fields left out keep their stored values.
      *
      * @param  int  $id  The setting ID
      * @param  array<string, mixed>  $data  The setting data
@@ -121,16 +113,18 @@ final class SettingsService
     public function update(int $id, array $data): bool
     {
         return DB::transaction(function () use ($id, $data) {
-            $validated = $this->validate($data, [
-                'key' => ['required', 'string', 'max:255', 'unique:settings,key,'.$id],
-                'label' => ['nullable', 'string', 'max:255'],
-                'description' => ['nullable', 'string', 'max:1000'],
-                'field_type' => ['required', 'in:input,checkbox,multioptions'],
-                'options' => ['nullable', 'string'],
-                'value' => ['nullable'],
-                'role' => ['required', 'in:system,user,plugin'],
-                'group' => ['nullable', 'string', 'in:general,authentication,notifications,security,appearance,system'],
-            ]);
+            $current = $this->findById($id);
+
+            if ($current === null) {
+                return false;
+            }
+
+            $validated = $this->validate(SettingRules::prepare($data, $current), SettingRules::rules($current));
+
+            // A system setting stays a system setting.
+            if ($current->role === SettingRole::System) {
+                $validated['role'] = SettingRole::System->value;
+            }
 
             return $this->repository->update($id, $validated);
         });

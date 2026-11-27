@@ -80,11 +80,11 @@ final class SettingsController implements HasMiddleware
     private function mapSetting(Setting $setting): array
     {
         return [
-            'uuid' => $setting->uuid,
             'key' => $setting->key,
             'value' => $setting->value,
             'field_type' => $setting->field_type ?? 'input',
-            'options' => $setting->options,
+            // Stored as an array; the admin form edits a comma-separated string.
+            'options' => is_array($setting->options) ? implode(',', $setting->options) : $setting->options,
             'label' => $setting->label ?? $setting->key,
             'description' => $setting->description,
             'role' => $setting->role?->value ?? SettingRole::User->value,
@@ -193,14 +193,6 @@ final class SettingsController implements HasMiddleware
     {
         $data = $request->validated();
 
-        // Handle checkbox values
-        if ($data['field_type'] === 'checkbox' && isset($data['value'])) {
-            $data['value'] = filter_var($data['value'], FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
-        }
-
-        // Set default role to 'user' if not provided
-        $data['role'] ??= SettingRole::User->value;
-
         $setting = $this->settingsService->create($data);
 
         if (class_exists(AuditLog::class)) {
@@ -237,16 +229,6 @@ final class SettingsController implements HasMiddleware
     public function update(SettingUpdateRequest $request, Setting $setting): RedirectResponse
     {
         $validated = $request->validated();
-
-        // Prevent changing role of system settings
-        if ($setting->role === SettingRole::System && isset($validated['role']) && $validated['role'] !== SettingRole::System->value) {
-            $validated['role'] = SettingRole::System->value;
-        }
-
-        // Handle checkbox values
-        if ($validated['field_type'] === 'checkbox' && isset($validated['value'])) {
-            $validated['value'] = filter_var($validated['value'], FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
-        }
 
         $oldValues = ['key' => $setting->key, 'value' => $setting->value];
 

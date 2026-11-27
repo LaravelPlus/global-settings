@@ -199,4 +199,38 @@ final class SettingsServiceTest extends TestCase
         $this->assertCount(1, $systemSettings);
         $this->assertEquals('system_key', $systemSettings->first()->key);
     }
+
+    public function test_direct_partial_update_keeps_key_type_and_role(): void
+    {
+        $setting = Setting::create(['key' => 'svc_partial', 'value' => 'a', 'field_type' => 'input', 'role' => SettingRole::Plugin->value]);
+
+        $this->service->update($setting->id, ['value' => 'b']);
+
+        $setting->refresh();
+        $this->assertSame(['svc_partial', 'b', 'input', SettingRole::Plugin], [$setting->key, $setting->value, $setting->field_type, $setting->role]);
+    }
+
+    public function test_direct_update_cannot_demote_a_system_setting(): void
+    {
+        $setting = Setting::create(['key' => 'svc_system', 'value' => 'a', 'field_type' => 'input', 'role' => SettingRole::System->value]);
+
+        $this->service->update($setting->id, ['role' => SettingRole::User->value]);
+
+        $this->assertSame(SettingRole::System, $setting->fresh()->role);
+    }
+
+    public function test_direct_create_defaults_the_role_and_accepts_array_options(): void
+    {
+        $setting = $this->service->create(['key' => 'svc_opts', 'field_type' => 'multioptions', 'options' => ['x', 'y'], 'value' => 'y']);
+
+        $this->assertSame(SettingRole::User, $setting->fresh()->role);
+        $this->assertSame(['x', 'y'], $setting->fresh()->options);
+    }
+
+    public function test_direct_calls_validate_typed_values(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->service->create(['key' => 'svc_num', 'field_type' => 'number', 'value' => 'abc']);
+    }
 }
