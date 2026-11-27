@@ -1,7 +1,12 @@
 {
     "name": "laravelplus/global-settings",
     "description": "A global settings management package for Laravel with admin panel support.",
-    "keywords": ["laravel", "settings", "global-settings", "admin"],
+    "keywords": [
+        "laravel",
+        "settings",
+        "global-settings",
+        "admin"
+    ],
     "license": "MIT",
     "authors": [
         {
@@ -16,10 +21,15 @@
         "illuminate/http": "^12.0|^13.0"
     },
     "require-dev": {
-        "inertiajs/inertia-laravel": "^2.0",
-        "orchestra/testbench": "^10.0",
-        "phpunit/phpunit": "^11.0",
-        "spatie/laravel-permission": "^6.0"
+        "inertiajs/inertia-laravel": "^2.0|^3.0",
+        "laravel/pint": "^1.0",
+        "orchestra/testbench": "^10.0|^11.0",
+        "phpunit/phpunit": "^11.0|^12.0",
+        "spatie/laravel-permission": "^6.0|^7.0"
+    },
+    "suggest": {
+        "inertiajs/inertia-laravel": "Required for the admin settings pages; without it the admin routes are not registered.",
+        "spatie/laravel-permission": "Optional: the default admin gate allows users with the super-admin or admin role."
     },
     "autoload": {
         "psr-4": {
@@ -48,5 +58,8 @@
         "sort-packages": true
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "scripts": {
+        "test": "phpunit"
+    }
 }
